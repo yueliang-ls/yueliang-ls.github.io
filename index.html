@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SPU/SKC 自动化工具（网页完整版）</title>
+    <title>SPU/SKC 自动化工具（整合网页版）</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         *{box-sizing:border-box;margin:0;padding:0;font-family:"Microsoft YaHei",sans-serif}
@@ -153,15 +153,36 @@ function loadSkuData() {
     reader.onload = e => {
         let data = new Uint8Array(e.target.result);
         let wb = XLSX.read(data, {type:'array'});
+        log('logSku','工作表列表：' + wb.SheetNames.join(', '));
+        
         wbInfo = wb.Sheets['商品信息'];
         wbAttr = wb.Sheets['商品属性'];
-        if(!wbInfo||!wbAttr) {log('logSku','必须包含「商品信息」和「商品属性」工作表');return}
-        let attrList = [...new Set(XLSX.utils.sheet_to_json(wbAttr,{header:1}).map(r=>r[1]).filter(Boolean))];
+        
+        if(!wbInfo) {
+            log('logSku','未找到「商品信息」工作表，请检查文件');
+            return;
+        }
+        if(!wbAttr) {
+            log('logSku','未找到「商品属性」工作表，请检查文件');
+            return;
+        }
+        
+        let attrRows = XLSX.utils.sheet_to_json(wbAttr,{header:1});
+        log('logSku','商品属性表读取行数：' + attrRows.length);
+        
+        let attrList = [...new Set(attrRows.map(r=>r[1]).filter(Boolean))];
+        log('logSku','提取到的属性名：' + attrList.join(', '));
+        
         let sel = document.getElementById('attrName');
         sel.innerHTML = '';
         attrList.forEach(a=>sel.innerHTML+=`<option>${a}</option>`);
-        loadAttrValues();
-        log('logSku','数据加载成功');
+        
+        if(attrList.length > 0) {
+            loadAttrValues();
+            log('logSku','数据加载成功，共' + attrList.length + '个属性');
+        } else {
+            log('logSku','未提取到任何属性名，请检查「商品属性」表的第2列是否为属性名');
+        }
     };
     reader.readAsArrayBuffer(file);
 }
@@ -172,7 +193,11 @@ function loadAttrValues() {
     let vals = [...new Set(rows.filter(r=>r[1]===attr).map(r=>r[2]).filter(Boolean))];
     let sel = document.getElementById('attrValue');
     sel.innerHTML = '';
-    vals.forEach(v=>sel.innerHTML+=`<option>${v}</option>`);
+    if(vals.length > 0) {
+        vals.forEach(v=>sel.innerHTML+=`<option>${v}</option>`);
+    } else {
+        sel.innerHTML = '<option>无属性值</option>';
+    }
 }
 document.getElementById('attrName').addEventListener('change',loadAttrValues);
 
