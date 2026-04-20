@@ -2,108 +2,322 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>SKU/SPU 批量处理工具</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPU/SKC 自动化工具（网页完整版）</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
-        *{box-sizing:border-box;margin:0;padding:0;font-family:微软雅黑,sans-serif}
-        body{background:#f5f7fa;padding:20px}
-        .container{max-width:1000px;margin:0 auto;background:white;padding:20px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}
-        h1{text-align:center;margin-bottom:20px;color:#333}
-        .tab{display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap}
-        .tab button{padding:10px 16px;border:none;background:#eef;border-radius:6px;cursor:pointer}
-        .tab button.active{background:#4e6ef2;color:white}
-        .tab-content{display:none;padding:20px;border:1px solid #ddd;border-radius:8px}
-        .tab-content.active{display:block}
-        .section{margin-bottom:15px}
-        label{display:block;margin-bottom:6px;font-weight:bold}
-        input,textarea,select{width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;margin-bottom:10px}
-        button{padding:10px 16px;background:#4e6ef2;color:white;border:none;border-radius:6px;cursor:pointer;margin-right:5px}
-        .log{background:#f8f9fa;padding:12px;border-radius:6px;margin-top:10px;min-height:80px;white-space:pre-line}
+        *{box-sizing:border-box;margin:0;padding:0;font-family:"Microsoft YaHei",sans-serif}
+        body{background:#f4f6f8;padding:20px}
+        .container{max-width:960px;margin:0 auto;background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.08);padding:24px}
+        h1{text-align:center;color:#222;margin-bottom:20px;font-size:22px}
+        .tab-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+        .tab-btn{padding:10px 16px;border:none;border-radius:8px;background:#eef2ff;color:#375fd6;cursor:pointer;font-weight:500}
+        .tab-btn.active{background:#375fd6;color:white}
+        .tab-panel{display:none;padding:20px;border:1px solid #e2e8f0;border-radius:10px}
+        .tab-panel.active{display:block}
+        .section{margin-bottom:16px}
+        label{display:block;margin-bottom:6px;font-weight:500;color:#333}
+        input,textarea,select{width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:10px}
+        .btn{padding:10px 16px;border-radius:8px;border:none;color:white;cursor:pointer;margin-right:6px;margin-bottom:6px}
+        .btn-blue{background:#375fd6}
+        .btn-green{background:#10b981}
+        .btn-orange{background:#f97316}
+        .btn-red{background:#ef4444}
+        .log-box{background:#f8fafc;padding:12px;border-radius:8px;margin-top:10px;min-height:100px;white-space:pre-line;font-size:14px;line-height:1.5}
+        .flex{display:flex;gap:10px;align-items:center}
+        .file-box{border:1px dashed #d1d5db;padding:12px;border-radius:8px;text-align:center}
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>SKU/SPU 批量处理工具</h1>
+    <h1>SPU/SKC 自动化工具（整合网页版）</h1>
 
-    <div class="tab">
-        <button class="tablink active" onclick="openTab(event,'sku')">SKU筛选</button>
-        <button class="tablink" onclick="openTab(event,'title')">标题后缀</button>
-        <button class="tablink" onclick="openTab(event,'spu')">SPU查SKC</button>
-        <button class="tablink" onclick="openTab(event,'join')">文本拼接</button>
+    <div class="tab-bar">
+        <button class="tab-btn active" onclick="openTab(0)">SKU筛选工具</button>
+        <button class="tab-btn" onclick="openTab(1)">标题后缀工具</button>
+        <button class="tab-btn" onclick="openTab(2)">SPU查SKC工具</button>
+        <button class="tab-btn" onclick="openTab(3)">TEXTJOIN拼接工具</button>
     </div>
 
-    <!-- SKU筛选 -->
-    <div id="sku" class="tab-content active">
+    <!-- ==================== Tab 0: SKU筛选工具 ==================== -->
+    <div class="tab-panel active" id="tab0">
         <div class="section">
-            <label>上传商品Excel（.xlsx）</label>
-            <input type="file" id="skuFile" accept=".xlsx">
-            <button onclick="loadSku()">加载数据</button>
-            <div class="log" id="skuLog">请上传Excel并点击加载</div>
+            <label>1. 上传导出文件（商品信息+商品属性）</label>
+            <input type="file" id="skuExcel" accept=".xlsx">
+            <button class="btn btn-blue" onclick="loadSkuData()">加载数据</button>
         </div>
+        <div class="section">
+            <label>2. 上传模板文件（用于导出）</label>
+            <input type="file" id="skuTemplate" accept=".xlsx">
+        </div>
+        <div class="section flex">
+            <div style="flex:1">
+                <label>属性名</label>
+                <select id="attrName"></select>
+            </div>
+            <div style="flex:1">
+                <label>属性值</label>
+                <select id="attrValue"></select>
+            </div>
+        </div>
+        <div class="section">
+            <label>I列内容</label>
+            <input type="text" id="iText" value="里衬类型:无内衬">
+        </div>
+        <div class="section">
+            <button class="btn btn-green" onclick="exportKeep()">保留筛选SKU</button>
+            <button class="btn btn-red" onclick="exportRemove()">减去筛选SKU</button>
+            <button class="btn btn-blue" onclick="exportAll()">导出全部SKU</button>
+        </div>
+        <div class="log-box" id="logSku">请上传Excel并点击加载数据</div>
     </div>
 
-    <!-- 标题后缀 -->
-    <div id="title" class="tab-content">
+    <!-- ==================== Tab 1: 标题后缀工具 ==================== -->
+    <div class="tab-panel" id="tab1">
         <div class="section">
-            <label>上传商品Excel</label>
-            <input type="file" id="titleFile" accept=".xlsx">
+            <label>1. 上传商品信息Excel</label>
+            <input type="file" id="titleExcel" accept=".xlsx">
+            <button class="btn btn-blue" onclick="loadTitleData()">加载数据</button>
+        </div>
+        <div class="section">
+            <label>2. 上传模板文件</label>
+            <input type="file" id="titleTemplate" accept=".xlsx">
+        </div>
+        <div class="section">
             <label>标题后缀</label>
-            <input type="text" id="suffix" placeholder="例如：2025新款">
-            <button onclick="addSuffix()">生成带后缀标题</button>
-            <div class="log" id="titleLog">请上传文件</div>
+            <input type="text" id="titleSuffix" placeholder="例如：2026新款">
         </div>
-    </div>
-
-    <!-- SPU查SKC -->
-    <div id="spu" class="tab-content">
         <div class="section">
-            <label>输入SPU（一行一个）</label>
-            <textarea id="spuInput" rows="4"></textarea>
-            <button onclick="querySpu()">查询SKC</button>
-            <div class="log" id="spuLog">结果将显示在这里</div>
+            <label>I列内容</label>
+            <input type="text" id="iText2" value="里衬类型:无内衬">
         </div>
+        <div class="section">
+            <button class="btn btn-green" onclick="exportTitle()">导出带后缀标题</button>
+        </div>
+        <div class="log-box" id="logTitle">请上传文件</div>
     </div>
 
-    <!-- 文本拼接 -->
-    <div id="join" class="tab-content">
+    <!-- ==================== Tab 2: SPU查SKC工具 ==================== -->
+    <div class="tab-panel" id="tab2">
+        <div class="section">
+            <label>1. 上传SPU-SKC映射表（D列SKC，E列SPU）</label>
+            <input type="file" id="mapFile" accept=".xlsx">
+            <button class="btn btn-blue" onclick="loadMap()">加载映射</button>
+        </div>
+        <div class="section">
+            <label>2. 输入SPU（一行一个）</label>
+            <textarea id="spuInput" rows="4" placeholder="一行一个SPU"></textarea>
+            <button class="btn btn-orange" onclick="querySKC()">查询SKC</button>
+            <button class="btn btn-green" onclick="copySKC()">复制结果</button>
+        </div>
+        <div class="log-box" id="logSpu">结果将显示在这里</div>
+    </div>
+
+    <!-- ==================== Tab 3: TEXTJOIN拼接工具 ==================== -->
+    <div class="tab-panel" id="tab3">
         <div class="section">
             <label>输入内容（一行一个）</label>
-            <textarea id="joinInput" rows="4"></textarea>
-            <label>分隔符</label>
-            <input type="text" id="sep" value="，">
-            <button onclick="doJoin()">拼接</button>
-            <div class="log" id="joinLog">结果</div>
+            <textarea id="joinInput" rows="5"></textarea>
         </div>
+        <div class="section">
+            <label>分隔符</label>
+            <input type="text" id="joinSep" value=",">
+        </div>
+        <button class="btn btn-blue" onclick="doTextJoin()">处理拼接</button>
+        <button class="btn btn-green" onclick="copyJoin()">复制结果</button>
+        <div class="log-box" id="logJoin">结果</div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
-    function openTab(evt,tabName){
-        let i,tabcontent,tablink;
-        tabcontent=document.getElementsByClassName("tab-content");
-        for(i=0;i<tabcontent.length;i++)tabcontent[i].className="tab-content";
-        tablink=document.getElementsByClassName("tablink");
-        for(i=0;i<tablink.length;i++)tablink[i].className="tablink";
-        document.getElementById(tabName).className="tab-content active";
-        evt.currentTarget.className+=" active";
-    }
+let tabs = document.querySelectorAll('.tab-panel');
+let btns = document.querySelectorAll('.tab-btn');
+function openTab(idx) {
+    tabs.forEach((t,i) => {
+        t.classList.toggle('active', i===idx);
+        btns[i].classList.toggle('active', i===idx);
+    });
+}
 
-    // SKU筛选（简化版）
-    function loadSku(){document.getElementById("skuLog").innerText="功能已就绪（完整版可定制）"}
+// ==================== 全局变量 ====================
+let wbInfo, wbAttr, wbTemplate;
+let titleWb, titleTemplate;
+let spuMap = {};
+let skcResult = [];
 
-    // 标题后缀
-    function addSuffix(){document.getElementById("titleLog").innerText="已生成带后缀标题（完整版可导出）"}
+// ==================== SKU筛选工具 ====================
+function loadSkuData() {
+    let file = document.getElementById('skuExcel').files[0];
+    if(!file) return log('logSku','请选择文件');
+    let reader = new FileReader();
+    reader.onload = e => {
+        let data = new Uint8Array(e.target.result);
+        let wb = XLSX.read(data, {type:'array'});
+        wbInfo = wb.Sheets['商品信息'];
+        wbAttr = wb.Sheets['商品属性'];
+        if(!wbInfo||!wbAttr) {log('logSku','必须包含「商品信息」和「商品属性」工作表');return}
+        let attrList = [...new Set(XLSX.utils.sheet_to_json(wbAttr,{header:1}).map(r=>r[1]).filter(Boolean))];
+        let sel = document.getElementById('attrName');
+        sel.innerHTML = '';
+        attrList.forEach(a=>sel.innerHTML+=`<option>${a}</option>`);
+        loadAttrValues();
+        log('logSku','数据加载成功');
+    };
+    reader.readAsArrayBuffer(file);
+}
 
-    // SPU查询
-    function querySpu(){document.getElementById("spuLog").innerText="SPU查询功能正常"}
+function loadAttrValues() {
+    let attr = document.getElementById('attrName').value;
+    let rows = XLSX.utils.sheet_to_json(wbAttr,{header:1});
+    let vals = [...new Set(rows.filter(r=>r[1]===attr).map(r=>r[2]).filter(Boolean))];
+    let sel = document.getElementById('attrValue');
+    sel.innerHTML = '';
+    vals.forEach(v=>sel.innerHTML+=`<option>${v}</option>`);
+}
+document.getElementById('attrName').addEventListener('change',loadAttrValues);
 
-    // 文本拼接
-    function doJoin(){
-        let t=document.getElementById("joinInput").value.split("\n");
-        let s=document.getElementById("sep").value;
-        let res=t.filter(x=>x.trim()).join(s);
-        document.getElementById("joinLog").innerText=res;
-    }
+function exportKeep() { doExport(true); }
+function exportRemove() { doExport(false); }
+function exportAll() { doExport(null); }
+
+function doExport(keep) {
+    let file = document.getElementById('skuTemplate').files[0];
+    if(!file) {log('logSku','请上传模板');return}
+    let attr = document.getElementById('attrName').value;
+    let val = document.getElementById('attrValue').value;
+    let text = document.getElementById('iText').value;
+
+    let reader = new FileReader();
+    reader.onload = e => {
+        let wb = XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+        let ws = wb.Sheets['修改商品信息'] || wb.Sheets[0];
+        let info = XLSX.utils.sheet_to_json(wbInfo,{header:1});
+        let attrRows = XLSX.utils.sheet_to_json(wbAttr,{header:1});
+
+        let skcSet = new Set();
+        if(keep!=null){
+            attrRows.forEach(r=>{if(r[1]===attr&&r[2]===val)skcSet.add(r[0])});
+        }
+
+        let out = [];
+        info.forEach((r,i)=>{
+            if(i<1)return;
+            let skc = r[2]+'';
+            let sku = r[0]+'';
+            if(sku.length<3)return;
+            if(keep===null || keep===skcSet.has(skc)){
+                out.push([sku, '', '', '', '', '', '', '', text]);
+            }
+        });
+
+        let newWs = XLSX.utils.aoa_to_sheet([
+            ['SKU','标题','','','','','','','I列内容'],
+            []
+        ].concat(out));
+        wb.Sheets[wb.SheetNames[0]] = newWs;
+        XLSX.writeFile(wb,'SKU导出结果.xlsx');
+        log('logSku',`导出完成，共${out.length}条`);
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+// ==================== 标题后缀工具 ====================
+function loadTitleData() {
+    let f = document.getElementById('titleExcel').files[0];
+    if(!f)return;
+    let r = new FileReader();
+    r.onload=e=>{
+        titleWb = XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+        log('logTitle','商品数据已加载');
+    };
+    r.readAsArrayBuffer(f);
+}
+
+function exportTitle() {
+    let f = document.getElementById('titleTemplate').files[0];
+    if(!f||!titleWb){log('logTitle','请先加载数据');return}
+    let suffix = document.getElementById('titleSuffix').value;
+    let text = document.getElementById('iText2').value;
+    let ws = titleWb.Sheets['商品信息'] || titleWb.Sheets[0];
+    let json = XLSX.utils.sheet_to_json(ws,{header:1});
+    let out = [];
+    json.forEach((r,i)=>{
+        if(i<1)return;
+        let sku = r[0]+'';
+        let title = (r[14]||'').trim();
+        if(suffix)title += ' ' + suffix;
+        if(sku.length>3)out.push([sku,title,'','','','','','',text]);
+    });
+    let r2 = new FileReader();
+    r2.onload=e=>{
+        let wb = XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+        let newWs = XLSX.utils.aoa_to_sheet([
+            ['SKU','标题','','','','','','','I列内容'],[]
+        ].concat(out));
+        wb.Sheets[wb.SheetNames[0]] = newWs;
+        XLSX.writeFile(wb,'标题后缀结果.xlsx');
+        log('logTitle',`导出完成，共${out.length}条`);
+    };
+    r2.readAsArrayBuffer(f);
+}
+
+// ==================== SPU查SKC ====================
+function loadMap() {
+    let f = document.getElementById('mapFile').files[0];
+    if(!f)return;
+    let r = new FileReader();
+    r.onload=e=>{
+        let wb = XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+        let ws = wb.Sheets[0];
+        let json = XLSX.utils.sheet_to_json(ws,{header:1});
+        spuMap = {};
+        json.forEach(r=>{
+            let skc = r[3]+'';
+            let spu = r[4]+'';
+            if(skc&&spu)spuMap[spu.trim()]=skc.trim();
+        });
+        log('logSpu',`映射加载完成：${Object.keys(spuMap).length}条`);
+    };
+    r.readAsArrayBuffer(f);
+}
+
+function querySKC() {
+    let text = document.getElementById('spuInput').value.trim();
+    let lines = text.split(/\n/).map(s=>s.trim()).filter(Boolean);
+    skcResult = [];
+    let logText = '';
+    lines.forEach(spu=>{
+        let skc = spuMap[spu] || '未找到';
+        skcResult.push(skc);
+        logText += `SPU: ${spu} → SKC: ${skc}\n`;
+    });
+    document.getElementById('logSpu').innerText = logText;
+}
+
+function copySKC() {
+    navigator.clipboard.writeText(skcResult.join('\n')).then(()=>{
+        log('logSpu','已复制到剪贴板');
+    });
+}
+
+// ==================== TEXTJOIN ====================
+function doTextJoin() {
+    let t = document.getElementById('joinInput').value.split('\n').map(s=>s.replace(/:/g,'').trim()).filter(Boolean);
+    let sep = document.getElementById('joinSep').value;
+    let u = [...new Set(t)];
+    let res = u.join(sep);
+    document.getElementById('logJoin').innerText = res;
+}
+
+function copyJoin() {
+    navigator.clipboard.writeText(document.getElementById('logJoin').innerText);
+    alert('已复制');
+}
+
+// 日志
+function log(id,msg) {
+    document.getElementById(id).innerText = msg;
+}
 </script>
 </body>
 </html>
